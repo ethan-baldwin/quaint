@@ -100,10 +100,11 @@ dstat_table <- function(test_taxa,species_tree,quartet_table,alpha=0.05) {
   return_df
 }
 
-dstat_table_all <- function(test_taxa_list,species_tree,quartet_table,alpha=0.05) {
+dstat_table_all <- function(species_tree,quartet_table,outgroup,alpha=0.05) {
+  test_taxa_list <- get_valid_test_pairs(species_tree,outgroup)
   pos <- 1:ncol(test_taxa_list)
   # test_taxa_list[,position]
-  taxon_pair_df <- lapply(pos,function(x) dstat_table(allpairs[,x],rooted_st,quartet_table,alpha=alpha))
+  taxon_pair_df <- lapply(pos,function(x) dstat_table(test_taxa_list[,x],species_tree,quartet_table,alpha=alpha))
   taxon_pair_df <- as.data.frame(do.call(rbind, taxon_pair_df))
   # taxon_pair_df <- taxon_pair_df[taxon_pair_df$outgroup=="Total",]
   # taxon_pair_df <- subset(taxon_pair_df,select = -c(outgroup,taxon3))
