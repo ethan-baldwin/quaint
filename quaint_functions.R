@@ -24,6 +24,11 @@ parse_table <- function(position,combos,quartet_table,st) {
   test_taxa <- c(p1,p2)
   
   qdf <- as.data.frame(quartet_table)
+  # qdf <- subset(qdf,qdf$'12|34'>1)
+  # qdf <- subset(qdf,qdf$'13|24'>1)
+  # qdf <- subset(qdf,qdf$'14|23'>1)
+
+  
   sub_qt <- qdf[qdf[,p1]==1&qdf[,p2]==1&qdf[,p3]==1&qdf[,o]==1,]
   
   qt_taxa <- names(sub_qt)[which(sub_qt == 1, arr.ind=T)[, "col"]]
@@ -87,9 +92,10 @@ dstat_table <- function(test_taxa,species_tree,quartet_table,alpha=0.05) {
   # return_df <- rbind(return_df,data.frame(outgroup="Total",taxon1=t1,taxon2=t2,taxon3=NA,d=NA,t(colSums(return_df[,5:8]))))
   return_df <- return_df %>%
     rowwise() %>% 
-    mutate(
-      test_stat = suppressWarnings(chisq.test(c(abba,baba))$statistic),
-      p_val = suppressWarnings(chisq.test(c(abba,baba))$p.value)) # perform chi squared test on all rows, including total row
+     mutate(
+      test_stat = ifelse(abba>1 & baba>1,suppressWarnings(chisq.test(c(abba,baba))$statistic),NA),
+      p_val = ifelse(abba>1 & baba>1,suppressWarnings(chisq.test(c(abba,baba))$p.value),NA) # perform chi squared test on all rows, including total row
+     ) 
   
   n_tests <- nrow(return_df)
   n_positive <- sum(return_df$d>0,na.rm = TRUE)
