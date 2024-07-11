@@ -7,32 +7,29 @@ find_column <- function(taxa_pair,taxa_quartet) {
   
 }
 
+# parse_table <- function(position,combos,quartet_df,st) {
 parse_table <- function(position,combos,quartet_table,st) {
   current_combo <- combos[position,]
   ######### get order of taxa for quartet table ##########
-  o <- st$tip.label[combos[position,1]]
-  p1 <- st$tip.label[combos[position,2]]
-  p2 <- st$tip.label[combos[position,3]]
-  p3 <- st$tip.label[combos[position,4]]
-  
+  # get names of each taxon
   o <- st$tip.label[current_combo[[1]]]
   p1 <- st$tip.label[current_combo[[2]]]
   p2 <- st$tip.label[current_combo[[3]]]
   p3 <- st$tip.label[current_combo[[4]]]
   
-  conc_taxa <- c(p2,p3)
-  test_taxa <- c(p1,p2)
+  # define taxa relationships
+  conc_taxa <- c(p2,p3) # taxa that are concordant with the species tree when together in the quartet
+  test_taxa <- c(p1,p2) # taxa we are testing for introgression
   
-  qdf <- as.data.frame(quartet_table)
-  # qdf <- subset(qdf,qdf$'12|34'>1)
-  # qdf <- subset(qdf,qdf$'13|24'>1)
-  # qdf <- subset(qdf,qdf$'14|23'>1)
-
+  # subset the quartet table to only the row corresponding to the current quartet of taxa
+  # qdf <- as.data.frame(quartet_table)
+  # sub_qt <- quartet_df[quartet_df[,p1]==1&quartet_df[,p2]==1&quartet_df[,p3]==1&quartet_df[,o]==1,]
+  sub_qt <- quartet_table[quartet_table[,p1]==1&quartet_table[,p2]==1&quartet_table[,p3]==1&quartet_table[,o]==1,]
   
-  sub_qt <- qdf[qdf[,p1]==1&qdf[,p2]==1&qdf[,p3]==1&qdf[,o]==1,]
-  
-  qt_taxa <- names(sub_qt)[which(sub_qt == 1, arr.ind=T)[, "col"]]
-  v<-c("12|34","13|24","14|23") # vector of column names to exclude when determining new taxon's position
+  # create list of taxa names in the order in which they appear in the quartet table
+  # qt_taxa <- colnames(sub_qt)[which(sub_qt == 1, arr.ind=T)[, "col"]]
+  qt_taxa <- names(sub_qt)[sub_qt==1]
+  v<-c("12|34","13|24","14|23") # vector of column names to exclude when determining new taxon's position (incase the value of one of these columns is 1)
   qt_taxa <- setdiff(qt_taxa,v)
   
   # set column definitions
@@ -41,20 +38,20 @@ parse_table <- function(position,combos,quartet_table,st) {
   baba_column <- setdiff(c("12|34","13|24","14|23"),c(abba_column,conc_column))
   
   # get values from columns
-  abba <- sub_qt[,abba_column]
-  baba <- sub_qt[,baba_column]
-  conc <- sub_qt[,conc_column]
+  abba <- sub_qt[abba_column]
+  baba <- sub_qt[baba_column]
+  conc <- sub_qt[conc_column]
   total <- abba+baba+conc
   d_stat <- (abba-baba)/(abba+baba)
   
-  # add data to return df
+  # create vector of data to return
   add2df <- c(o,p1,p2,p3,abba,baba,conc,total,d_stat)
   add2df
 }
 
 dstat_table <- function(test_taxa,species_tree,quartet_table,alpha=0.05) {
   mrca <- getMRCA(species_tree, test_taxa) 
-  node_groups <- nodeGroups(species_tree,mrca) # create node groups to determine where taxon is
+  node_groups <- nodeGroups(species_tree,mrca) # create node groups to determine where taxa are
   t1 <- test_taxa[1]
   t2 <- test_taxa[2]
   # get tip number from tip label
@@ -74,14 +71,14 @@ dstat_table <- function(test_taxa,species_tree,quartet_table,alpha=0.05) {
     stop("Test taxa are sister taxa and cannot be tested for introgression.")
   }
   
-  # get all test combinations
+  # get all quartets that can be used to test for introgression
   combos_1 <- expand.grid(og_tips,t1_num,t2_num,sister_tips_t2)
   combos_2 <- expand.grid(og_tips,t2_num,t1_num,sister_tips_t1)
   all_combos <- rbind(combos_1,combos_2)
   
   # parse quartet frequency df and prepare output data frame 
   num_rows <- 1:nrow(all_combos) # get number of rows
-  data_list <- lapply(num_rows,parse_table,combos=all_combos,quartet_table=quartet_table,st=species_tree) # call function that parses quartet freq df
+  data_list <- lapply(num_rows,parse_table,combos=all_combos,quartet_table=qt,st=species_tree) # call function that parses quartet freq df
   return_df <- as.data.frame(do.call(rbind, data_list)) # convert output from lapply (list) into data frame
   cnames<-c(  "outgroup","taxon1","taxon2","taxon3",
               "abba","baba","concordant","total","d") # appropriate column names
@@ -107,7 +104,7 @@ dstat_table <- function(test_taxa,species_tree,quartet_table,alpha=0.05) {
 }
 
 dstat_table_all <- function(species_tree,quartet_table,outgroup,alpha=0.05) {
-  test_taxa_list <- get_valid_test_pairs(species_tree,outgroup)
+  test_taxa_list <- get_valid_test_pairs(species_tree,outgroup) # make list of pairs of species that are can be tested w/ quartet test
   pos <- 1:ncol(test_taxa_list)
   # test_taxa_list[,position]
   taxon_pair_df <- lapply(pos,function(x) dstat_table(test_taxa_list[,x],species_tree,quartet_table,alpha=alpha))
