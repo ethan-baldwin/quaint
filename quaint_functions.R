@@ -78,7 +78,7 @@ dstat_table <- function(test_taxa,species_tree,quartet_table,alpha=0.05) {
   
   # parse quartet frequency df and prepare output data frame 
   num_rows <- 1:nrow(all_combos) # get number of rows
-  data_list <- lapply(num_rows,parse_table,combos=all_combos,quartet_table=qt,st=species_tree) # call function that parses quartet freq df
+  data_list <- lapply(num_rows,parse_table,combos=all_combos,quartet_table=quartet_table,st=species_tree) # call function that parses quartet freq df
   return_df <- as.data.frame(do.call(rbind, data_list)) # convert output from lapply (list) into data frame
   cnames<-c(  "outgroup","taxon1","taxon2","taxon3",
               "abba","baba","concordant","total","d") # appropriate column names
