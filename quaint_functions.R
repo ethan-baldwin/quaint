@@ -49,7 +49,9 @@ parse_table <- function(position,combos,quartet_table,st) {
   add2df
 }
 
-dstat_table <- function(test_taxa,species_tree,quartet_table,alpha=0.05) {
+dstat_table <- function(test_taxa,species_tree,quartet_table,qt_vector,alpha=0.05) {
+  #### dstat_table
+  
   mrca <- getMRCA(species_tree, test_taxa) 
   node_groups <- nodeGroups(species_tree,mrca) # create node groups to determine where taxa are
   t1 <- test_taxa[1]
@@ -76,9 +78,21 @@ dstat_table <- function(test_taxa,species_tree,quartet_table,alpha=0.05) {
   combos_2 <- expand.grid(og_tips,t2_num,t1_num,sister_tips_t1)
   all_combos <- rbind(combos_1,combos_2)
   
+  ##### subset quartet table into only those with quartets in all_combos
+  # make all_combos into a vector of tip names
+  ac <- all_combos
+  ac[] = sapply(ac, function(x){ x[x] <- species_tree$tip.label[x]})
+  
+  # ac_vector <- apply(a_c, 1, function(x) as.vector(x))
+  ac_sorted_vector <- apply(ac, 1, function(x) paste(sort(x),collapse = ","))
+  
+  if(!hasArg(qt_vector)) {qt_vector <- get_qt_vector(quartet_table)}
+  
+  subset_qt <- quartet_table[which(qt_vector %in% ac_sorted_vector),]
+  
   # parse quartet frequency df and prepare output data frame 
   num_rows <- 1:nrow(all_combos) # get number of rows
-  data_list <- lapply(num_rows,parse_table,combos=all_combos,quartet_table=quartet_table,st=species_tree) # call function that parses quartet freq df
+  data_list <- lapply(num_rows,parse_table,combos=all_combos,quartet_table=subset_qt,st=species_tree)
   return_df <- as.data.frame(do.call(rbind, data_list)) # convert output from lapply (list) into data frame
   cnames<-c(  "outgroup","taxon1","taxon2","taxon3",
               "abba","baba","concordant","total","d") # appropriate column names
@@ -89,25 +103,31 @@ dstat_table <- function(test_taxa,species_tree,quartet_table,alpha=0.05) {
   # return_df <- rbind(return_df,data.frame(outgroup="Total",taxon1=t1,taxon2=t2,taxon3=NA,d=NA,t(colSums(return_df[,5:8]))))
   return_df <- return_df %>%
     rowwise() %>% 
-     mutate(
+    mutate(
       test_stat = ifelse(abba>1 & baba>1,suppressWarnings(chisq.test(c(abba,baba))$statistic),NA),
       p_val = ifelse(abba>1 & baba>1,suppressWarnings(chisq.test(c(abba,baba))$p.value),NA) # perform chi squared test on all rows, including total row
-     ) 
+    ) 
   
-  n_tests <- nrow(return_df)
-  n_positive <- sum(return_df$d>0,na.rm = TRUE)
-  n_positive_significant <- nrow(return_df[(return_df$d>0&return_df$p_val<alpha),])
-  total_df <- data.frame(outgroup="Total",taxon1=t1,taxon2=t2,taxon3=NA,d=n_tests,t(colSums(return_df[,5:8])),test_stat=n_positive,p_val=n_positive_significant)
-  return_df <- rbind(return_df,total_df) # add a row with totals for all topology columns
+  # n_tests <- nrow(return_df)
+  # n_positive <- sum(return_df$d>0,na.rm = TRUE)
+  # n_positive_significant <- nrow(return_df[(return_df$d>0&return_df$p_val<alpha),])
+  # total_df <- data.frame(outgroup="Total",taxon1=t1,taxon2=t2,taxon3=NA,d=n_tests,t(colSums(return_df[,5:8])),test_stat=n_positive,p_val=n_positive_significant)
+  # return_df <- rbind(return_df,total_df) # add a row with totals for all topology columns
   # summary_df <- data.frame(n_total_tests = n_tests,n_positive_d = n_positive,n_positive_significant_tests = n_positive_significant)
   return_df
 }
 
 dstat_table_all <- function(species_tree,quartet_table,outgroup,alpha=0.05) {
-  test_taxa_list <- get_valid_test_pairs(species_tree,outgroup) # make list of pairs of species that are can be tested w/ quartet test
+  
+  # make list of pairs of species that are can be tested w/ quartet test
+  test_taxa_list <- get_valid_test_pairs(species_tree,outgroup) 
+  
+  # create quartet vector for faster lookups
+  qt_vector <- get_qt_vector(quartet_table)
+  
+  # run quaint on all taxon pairs
   pos <- 1:ncol(test_taxa_list)
-  # test_taxa_list[,position]
-  taxon_pair_df <- lapply(pos,function(x) dstat_table(test_taxa_list[,x],species_tree,quartet_table,alpha=alpha))
+  taxon_pair_df <- lapply(pos,function(x) dstat_table_new(test_taxa_list[,x],species_tree,quartet_table,qt_vector,alpha=alpha))
   taxon_pair_df <- as.data.frame(do.call(rbind, taxon_pair_df))
   # taxon_pair_df <- taxon_pair_df[taxon_pair_df$outgroup=="Total",]
   # taxon_pair_df <- subset(taxon_pair_df,select = -c(outgroup,taxon3))
@@ -144,4 +164,20 @@ is_taxon_pair_valid <- function(position,p_combos,tree) {
   og_tips <- node_groups[[setdiff(c(1,2,3),c(t1_group,t2_group))]]
   
   !(length(sister_tips_t1)==0 & (length(og_tips)==0)) & !(length(sister_tips_t1)==0 & length(sister_tips_t2)==0) & !(length(sister_tips_t2)==0 & (length(og_tips)==0))
+}
+
+get_qt_vector <- function(quartet_table) {
+  # convert quartet table into vector of taxon names for faster processing
+  drop<-c("12|34","13|24","14|23") # drop these columns
+  qt_dropped_cnames <- quartet_table[,!colnames(quartet_table) %in% drop] # remove columns in "drop"
+  sorted_colnames <- sort(colnames(qt_dropped_cnames)) # get list of sorted column names (for more efficient comparisons later)
+  qt_dropped_cnames <- qt_dropped_cnames[, sorted_colnames] # sort column names in matrix
+  indices <- which(qt_dropped_cnames == 1, arr.ind = TRUE)
+  qt_vector <- split(colnames(qt_dropped_cnames)[indices[, 2]], indices[, 1])
+  qt_vector <- lapply(qt_vector,paste,collapse=",")
+  qt_vector
+}
+
+summarize_quaint_table <- function(quaint_table) {
+  
 }
