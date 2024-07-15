@@ -2,29 +2,27 @@ library("MSCquartets")
 library("combinat")
 library("dplyr")
 library("stringr")
+library("tidyr")
 
-# This is pulling in the functions from "quaint_functions.R". Replace with path to this  
+# This is reading the functions from "quaint_functions.R". Replace with path to that script  
 source("path/to/quaint/quaint_functions.R")
-source("~/GitHub/sarracenia_genome_assembly/phylo/quartets/quartets_functions.R")
-
-setwd("~/Research/genome_assembly/introgression/quartets/")
 
 ############### Read tree files and set outgroups. #################
 # Read gene trees. This should be one file with all of the gene trees in newick format (one tree per line).
-gt <- read.tree("merged.tre") 
+gene_trees <- read.tree("merged.tre") 
 
 # Read species tree. This should be the ROOTED species tree in newick format.
-st <- read.tree("astral3.tre")
+sp_tree <- read.tree("astral3_rooted.tre")
 
-# Vector of outgroups names in your trees.
-og <- c("heliamphora_pulchella_SRR25244091","heliamphora_ciliata_SRR24877724","darlingtonia_californica_SRR24877818") 
+# Vector of outgroup names in your trees.
+outgroup <- c("heliamphora_pulchella_SRR25244091","heliamphora_ciliata_SRR24877724") 
 
 # In case your species tree isn't rooted.
 # st <- root(st,og)
 
 ################### Calculate quartet table ##################
 
-qt <- quartetTable(gt,taxonnames = st$tip.label) # calculate quartet frequencies
+quartet_table <- quartetTable(gene_trees,taxonnames = sp_tree$tip.label) # calculate quartet frequencies
 
 ############### Testing for introgression between two taxa ################  
 
@@ -32,22 +30,21 @@ qt <- quartetTable(gt,taxonnames = st$tip.label) # calculate quartet frequencies
 test_taxon_names <- c("S_jonesii","S_purpurea_montana") 
 
 # command to perform quartet frequency test for introgression
-d_table <- dstat_table(test_taxa = test_taxon_names,species_tree = st, quartet_table = qt) 
+quaint_table <- quaint(test_taxon_names,sp_tree,quartet_table) 
 
 # write results to csv
-write.csv(d_table, file = "taxon1_taxon2_table.csv")
+write.csv(quaint_table, file = "S_jonesii_S_purpurea_montana_table.csv")
 
 ############### Testing for introgression between all taxon pairs ################  
 
-d_all <- dstat_table_all(species_tree=st,outgroup=og,quartet_table=qt,alpha = 0.05)
+qt_all_pairs <- quaint_all(sp_tree,quartet_table,outgroup)
 
-# grab only the summary rows, add proportion of tests passed.
-d_sum <- d_all[d_all$outgroup=="Total",]
-d_sum$proportion <- d_sum$p_val/d_sum$d
+# write full table to csv
+write.csv(qt_all_pairs, file = "quaint_all_pairs.csv")
 
-# write results to csv
-write.csv(d_sum, file = "quartet_test_summary.csv")
+# summarize table
+sum_table <- summarize_quaint_table(qt_all_pairs)
 
-
+write.csv(sum_table,file = "quaint_summary.csv")
 
 
