@@ -42,8 +42,8 @@ qt_all_pairs <- quaint_all(sp_tree,quartet_table,outgroup)
 # write full table to csv
 write.csv(qt_all_pairs, file = "quaint_all_pairs.csv")
 
-# summarize table
-sum_table <- summarize_quaint_table(qt_all_pairs)
+# summarize results by pair, using a p value cutoff of 0.05 for the chi sq tests
+sum_table <- summarize_quaint_table(qt_all_pairs,alpha = 0.05)
 
 write.csv(sum_table,file = "quaint_summary.csv")
 
