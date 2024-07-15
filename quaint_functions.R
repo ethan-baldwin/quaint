@@ -117,7 +117,7 @@ dstat_table <- function(test_taxa,species_tree,quartet_table,qt_vector,alpha=0.0
   return_df
 }
 
-dstat_table_all <- function(species_tree,quartet_table,outgroup,alpha=0.05) {
+dstat_table_all <- function(species_tree,quartet_table,outgroup) {
   
   # make list of pairs of species that are can be tested w/ quartet test
   test_taxa_list <- get_valid_test_pairs(species_tree,outgroup) 
@@ -127,7 +127,7 @@ dstat_table_all <- function(species_tree,quartet_table,outgroup,alpha=0.05) {
   
   # run quaint on all taxon pairs
   pos <- 1:ncol(test_taxa_list)
-  taxon_pair_df <- lapply(pos,function(x) dstat_table_new(test_taxa_list[,x],species_tree,quartet_table,qt_vector,alpha=alpha))
+  taxon_pair_df <- lapply(pos,function(x) dstat_table(test_taxa_list[,x],species_tree,quartet_table,qt_vector,alpha=alpha))
   taxon_pair_df <- as.data.frame(do.call(rbind, taxon_pair_df))
   # taxon_pair_df <- taxon_pair_df[taxon_pair_df$outgroup=="Total",]
   # taxon_pair_df <- subset(taxon_pair_df,select = -c(outgroup,taxon3))
@@ -178,6 +178,26 @@ get_qt_vector <- function(quartet_table) {
   qt_vector
 }
 
-summarize_quaint_table <- function(quaint_table) {
+summarize_quaint_table <- function(quaint_table,alpha = 0.05) {
+  # add column with test pair as a factor 
+  quaint_table <- quaint_table %>%
+    rowwise() %>%
+    mutate(pair = factor(paste(sort(c(taxon1,taxon2)),collapse = "|"))) %>%
+    ungroup()
   
+  # summarize the table by test pair
+  summary_table <- quaint_table %>%
+    group_by(pair) %>%
+    summarise(
+      total_abba = sum(abba),
+      total_baba = sum(baba),
+      total_concordant = sum(concordant),
+      n_tests = n(),
+      n_positive = sum(d > 0),
+      n_positive_significant = sum(d > 0 & p_val < alpha)
+    ) %>%
+    mutate(proportion = n_positive_significant/n_tests) %>%
+    separate(pair, into = c("taxon1", "taxon2"), sep = "\\|")
+  
+  summary_table
 }
