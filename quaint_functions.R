@@ -1,3 +1,9 @@
+library("MSCquartets")
+library("combinat")
+library("dplyr")
+library("stringr")
+library("tidyr")
+
 find_column <- function(taxa_pair,taxa_quartet) {
   if (all(taxa_pair %in% taxa_quartet[1:2])|all(taxa_pair %in% taxa_quartet[3:4])) {
     return("12|34")
@@ -49,9 +55,8 @@ parse_table <- function(position,combos,quartet_table,st) {
   add2df
 }
 
-quaint <- function(test_taxa,species_tree,quartet_table,qt_vector) {
-  #### dstat_table
-
+quaint <- function(test_taxa,species_tree,quartet_table,qt_vector,outgroups) {
+  
   mrca <- getMRCA(species_tree, test_taxa)
   node_groups <- nodeGroups(species_tree,mrca) # create node groups to determine where taxa are
   t1 <- test_taxa[1]
@@ -62,17 +67,33 @@ quaint <- function(test_taxa,species_tree,quartet_table,qt_vector) {
   # get node group
   t1_group <- which(sapply(node_groups, is.element, el = t1_num))
   t2_group <- which(sapply(node_groups, is.element, el = t2_num))
-
-  # get tip numbers for all outgroups and sister taxa
+  
+  # get tip numbers for all sister taxa
   sister_tips_t1 <- setdiff(node_groups[[t1_group]],c(t1_num))
   sister_tips_t2 <- setdiff(node_groups[[t2_group]],c(t2_num))
-  og_tips <- node_groups[[setdiff(c(1,2,3),c(t1_group,t2_group))]]
-
+  
   # check if taxa are sister
   if (length(sister_tips_t1) == 0 & length(sister_tips_t2) == 0) {
     stop("Test taxa are sister taxa and cannot be tested for introgression.")
   }
-
+  
+  # get outgroup tips from tree
+  og_tips_from_tree <- node_groups[[setdiff(c(1,2,3),c(t1_group,t2_group))]] #outgroup tips from comparing sister tips
+  
+  # if outgroup is defined, use that as the outgroup tips. otherwise, use outgroup tips from tree
+  if(!hasArg(outgroup)) {
+    og_tips <- c()
+    for(i in 1:length(outgroup)){
+      og_tips[i] <- which(species_tree$tip.label==outgroup[i])
+    }
+    # make sure given outgroup is compatible with the test taxa 
+    if (length(intersect(og_tips, sister_tips_t1)) > 0 || length(intersect(og_tips, sister_tips_t2)) > 0) {
+      stop(paste(c("The outgroup taxa are incompatible with testing for introgression with ",t1," and ",t2,". Make sure the outgroup is defined correctly.")))
+    }
+  } else {
+    og_tips <- og_tips_from_tree
+  } 
+  
   # get all quartets that can be used to test for introgression
   combos_1 <- expand.grid(og_tips,t1_num,t2_num,sister_tips_t2)
   combos_2 <- expand.grid(og_tips,t2_num,t1_num,sister_tips_t1)
@@ -82,12 +103,12 @@ quaint <- function(test_taxa,species_tree,quartet_table,qt_vector) {
   # make all_combos into a vector of tip names
   ac <- all_combos
   ac[] = sapply(ac, function(x){ x[x] <- species_tree$tip.label[x]})
-
-  # ac_vector <- apply(a_c, 1, function(x) as.vector(x))
   ac_sorted_vector <- apply(ac, 1, function(x) paste(sort(x),collapse = ","))
 
+  # if ran via quaint_all function, use the pre-subsetted quartet table (to save time)
   if(!hasArg(qt_vector)) {qt_vector <- get_qt_vector(quartet_table)}
-
+  
+  # further subset the quartet table to only the quartets needed for this test (to save time)
   subset_qt <- quartet_table[which(qt_vector %in% ac_sorted_vector),]
 
   # parse quartet frequency df and prepare output data frame
@@ -100,7 +121,6 @@ quaint <- function(test_taxa,species_tree,quartet_table,qt_vector) {
   return_df <- return_df %>% mutate_at(c("abba","baba","concordant","total","d"), as.numeric) # convert columns to numeric as approprtiate
 
   #perform chi squared tests
-  # return_df <- rbind(return_df,data.frame(outgroup="Total",taxon1=t1,taxon2=t2,taxon3=NA,d=NA,t(colSums(return_df[,5:8]))))
   return_df <- return_df %>%
     rowwise() %>%
     mutate(
@@ -108,12 +128,7 @@ quaint <- function(test_taxa,species_tree,quartet_table,qt_vector) {
       p_val = ifelse(abba>1 & baba>1,suppressWarnings(chisq.test(c(abba,baba))$p.value),NA) # perform chi squared test on all rows, including total row
     )
 
-  # n_tests <- nrow(return_df)
-  # n_positive <- sum(return_df$d>0,na.rm = TRUE)
-  # n_positive_significant <- nrow(return_df[(return_df$d>0&return_df$p_val<alpha),])
-  # total_df <- data.frame(outgroup="Total",taxon1=t1,taxon2=t2,taxon3=NA,d=n_tests,t(colSums(return_df[,5:8])),test_stat=n_positive,p_val=n_positive_significant)
-  # return_df <- rbind(return_df,total_df) # add a row with totals for all topology columns
-  # summary_df <- data.frame(n_total_tests = n_tests,n_positive_d = n_positive,n_positive_significant_tests = n_positive_significant)
+
   return_df
 }
 
@@ -127,10 +142,11 @@ quaint_all <- function(species_tree,quartet_table,outgroup) {
 
   # run quaint on all taxon pairs
   pos <- 1:ncol(test_taxa_list)
-  taxon_pair_df <- lapply(pos,function(x) quaint(test_taxa_list[,x],species_tree,quartet_table,qt_vector))
+  taxon_pair_df <- lapply(pos,function(x) quaint(test_taxa_list[,x],species_tree,quartet_table,qt_vector,outgroups = outgroup))
   taxon_pair_df <- as.data.frame(do.call(rbind, taxon_pair_df))
-  # taxon_pair_df <- taxon_pair_df[taxon_pair_df$outgroup=="Total",]
-  # taxon_pair_df <- subset(taxon_pair_df,select = -c(outgroup,taxon3))
+  
+  taxon_pair_df$adj_p_val <- p.adjust(taxon_pair_df$p_val, method = "fdr") 
+
   taxon_pair_df
 }
 
@@ -178,13 +194,15 @@ get_qt_vector <- function(quartet_table) {
   qt_vector
 }
 
-summarize_quaint_table <- function(quaint_table,alpha = 0.05) {
+summarize_quaint_table <- function(quaint_table,alpha = 0.01) {
   # add column with test pair as a factor
   quaint_table <- quaint_table %>%
     rowwise() %>%
-    mutate(pair = factor(paste(sort(c(taxon1,taxon2)),collapse = "|"))) %>%
+    mutate(
+      pair = factor(paste(sort(c(taxon1,taxon2)),collapse = "|")),
+      d_sig = if(p_val < alpha){d} else {0} ) %>%
     ungroup()
-
+  
   # summarize the table by test pair
   summary_table <- quaint_table %>%
     group_by(pair) %>%
@@ -194,12 +212,13 @@ summarize_quaint_table <- function(quaint_table,alpha = 0.05) {
       total_concordant = sum(concordant),
       n_tests = n(),
       n_positive = sum(d > 0),
-      n_positive_significant = sum(d > 0 & p_val < alpha & !is.na(p_val), na.rm = TRUE)
+      n_positive_significant = sum(d > 0 & p_val < alpha & !is.na(p_val), na.rm = TRUE),
+      mean_d = mean(d_sig[d_sig>=0])
     ) %>%
     mutate(
       proportion = n_positive_significant/n_tests,
       d = (total_abba-total_baba)/(total_abba+total_baba)
-      ) %>%
+    ) %>%
     separate(pair, into = c("taxon1", "taxon2"), sep = "\\|")
 
   summary_table
