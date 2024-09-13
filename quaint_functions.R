@@ -57,7 +57,7 @@ parse_table <- function(position,combos,quartet_table,st) {
 }
 
 quaint <- function(test_taxa,species_tree,quartet_table,qt_vector,outgroups) {
-  
+
   mrca <- getMRCA(species_tree, test_taxa)
   node_groups <- nodeGroups(species_tree,mrca) # create node groups to determine where taxa are
   t1 <- test_taxa[1]
@@ -68,33 +68,33 @@ quaint <- function(test_taxa,species_tree,quartet_table,qt_vector,outgroups) {
   # get node group
   t1_group <- which(sapply(node_groups, is.element, el = t1_num))
   t2_group <- which(sapply(node_groups, is.element, el = t2_num))
-  
+
   # get tip numbers for all sister taxa
   sister_tips_t1 <- setdiff(node_groups[[t1_group]],c(t1_num))
   sister_tips_t2 <- setdiff(node_groups[[t2_group]],c(t2_num))
-  
+
   # check if taxa are sister
   if (length(sister_tips_t1) == 0 & length(sister_tips_t2) == 0) {
     stop("Test taxa are sister taxa and cannot be tested for introgression.")
   }
-  
+
   # get outgroup tips from tree
   og_tips_from_tree <- node_groups[[setdiff(c(1,2,3),c(t1_group,t2_group))]] #outgroup tips from comparing sister tips
-  
+
   # if outgroup is defined, use that as the outgroup tips. otherwise, use outgroup tips from tree
   if(!hasArg(outgroup)) {
     og_tips <- c()
     for(i in 1:length(outgroup)){
       og_tips[i] <- which(species_tree$tip.label==outgroup[i])
     }
-    # make sure given outgroup is compatible with the test taxa 
+    # make sure given outgroup is compatible with the test taxa
     if (length(intersect(og_tips, sister_tips_t1)) > 0 || length(intersect(og_tips, sister_tips_t2)) > 0) {
       stop(paste(c("The outgroup taxa are incompatible with testing for introgression with ",t1," and ",t2,". Make sure the outgroup is defined correctly.")))
     }
   } else {
     og_tips <- og_tips_from_tree
-  } 
-  
+  }
+
   # get all quartets that can be used to test for introgression
   combos_1 <- expand.grid(og_tips,t1_num,t2_num,sister_tips_t2)
   combos_2 <- expand.grid(og_tips,t2_num,t1_num,sister_tips_t1)
@@ -108,7 +108,7 @@ quaint <- function(test_taxa,species_tree,quartet_table,qt_vector,outgroups) {
 
   # if ran via quaint_all function, use the pre-subsetted quartet table (to save time)
   if(!hasArg(qt_vector)) {qt_vector <- get_qt_vector(quartet_table)}
-  
+
   # further subset the quartet table to only the quartets needed for this test (to save time)
   subset_qt <- quartet_table[which(qt_vector %in% ac_sorted_vector),]
 
@@ -145,8 +145,8 @@ quaint_all <- function(species_tree,quartet_table,outgroup) {
   pos <- 1:ncol(test_taxa_list)
   taxon_pair_df <- lapply(pos,function(x) quaint(test_taxa_list[,x],species_tree,quartet_table,qt_vector,outgroups = outgroup))
   taxon_pair_df <- as.data.frame(do.call(rbind, taxon_pair_df))
-  
-  taxon_pair_df$adj_p_val <- p.adjust(taxon_pair_df$p_val, method = "fdr") 
+
+  taxon_pair_df$adj_p_val <- p.adjust(taxon_pair_df$p_val, method = "fdr")
 
   taxon_pair_df
 }
@@ -205,7 +205,7 @@ summarize_quaint_table <- function(quaint_table,alpha = 0.01) {
       f_sig = if(p_val < alpha){f} else {0},
       ) %>%
     ungroup()
-  
+
   # summarize the table by test pair
   summary_table <- quaint_table %>%
     group_by(pair) %>%
@@ -216,7 +216,7 @@ summarize_quaint_table <- function(quaint_table,alpha = 0.01) {
       n_tests = n(),
       n_positive = sum(d > 0),
       n_positive_significant = sum(d > 0 & p_val < alpha & !is.na(p_val), na.rm = TRUE),
-      mean_d = mean(d_sig[d_sig>=0]),
+      mean_d = ifelse(sum(d_sig >= 0) > 0, mean(d_sig[d_sig >= 0]), 0),
       mean_f = mean(f_sig[d_sig>=0])
     ) %>%
     mutate(
