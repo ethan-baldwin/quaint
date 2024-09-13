@@ -49,9 +49,10 @@ parse_table <- function(position,combos,quartet_table,st) {
   conc <- sub_qt[conc_column]
   total <- abba+baba+conc
   d_stat <- (abba-baba)/(abba+baba)
+  f_stat <- (abba-baba)/(conc-baba)
 
   # create vector of data to return
-  add2df <- c(o,p1,p2,p3,abba,baba,conc,total,d_stat)
+  add2df <- c(o,p1,p2,p3,abba,baba,conc,total,d_stat,f_stat)
   add2df
 }
 
@@ -116,9 +117,9 @@ quaint <- function(test_taxa,species_tree,quartet_table,qt_vector,outgroups) {
   data_list <- lapply(num_rows,parse_table,combos=all_combos,quartet_table=subset_qt,st=species_tree)
   return_df <- as.data.frame(do.call(rbind, data_list)) # convert output from lapply (list) into data frame
   cnames<-c(  "outgroup","taxon1","taxon2","taxon3",
-              "abba","baba","concordant","total","d") # appropriate column names
+              "abba","baba","concordant","total","d","f") # appropriate column names
   colnames(return_df) <- cnames # add column names to df
-  return_df <- return_df %>% mutate_at(c("abba","baba","concordant","total","d"), as.numeric) # convert columns to numeric as approprtiate
+  return_df <- return_df %>% mutate_at(c("abba","baba","concordant","total","d","f"), as.numeric) # convert columns to numeric as approprtiate
 
   #perform chi squared tests
   return_df <- return_df %>%
@@ -200,7 +201,9 @@ summarize_quaint_table <- function(quaint_table,alpha = 0.01) {
     rowwise() %>%
     mutate(
       pair = factor(paste(sort(c(taxon1,taxon2)),collapse = "|")),
-      d_sig = if(p_val < alpha){d} else {0} ) %>%
+      d_sig = if(p_val < alpha){d} else {0},
+      f_sig = if(p_val < alpha){f} else {0},
+      ) %>%
     ungroup()
   
   # summarize the table by test pair
@@ -213,7 +216,8 @@ summarize_quaint_table <- function(quaint_table,alpha = 0.01) {
       n_tests = n(),
       n_positive = sum(d > 0),
       n_positive_significant = sum(d > 0 & p_val < alpha & !is.na(p_val), na.rm = TRUE),
-      mean_d = mean(d_sig[d_sig>=0])
+      mean_d = mean(d_sig[d_sig>=0]),
+      mean_f = mean(f_sig[d_sig>=0])
     ) %>%
     mutate(
       proportion = n_positive_significant/n_tests,
