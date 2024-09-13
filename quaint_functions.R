@@ -213,7 +213,7 @@ summarize_quaint_table <- function(quaint_table,alpha = 0.01) {
       n_tests = n(),
       n_positive = sum(d > 0),
       n_positive_significant = sum(d > 0 & p_val < alpha & !is.na(p_val), na.rm = TRUE),
-      mean_d = mean(d_sig[d_sig>=0])
+      mean_d = ifelse(sum(d_sig >= 0) > 0, mean(d_sig[d_sig >= 0]), 0)
     ) %>%
     mutate(
       proportion = n_positive_significant/n_tests,
