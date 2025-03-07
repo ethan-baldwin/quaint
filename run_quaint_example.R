@@ -1,12 +1,3 @@
-library("MSCquartets")
-library("combinat")
-library("dplyr")
-library("stringr")
-library("tidyr")
-
-# This is reading the functions from "quaint_functions.R". Replace with path to that script  
-source("path/to/quaint/quaint_functions.R")
-
 ############### Read tree files and set outgroups. #################
 # Read gene trees. This should be one file with all of the gene trees in newick format (one tree per line).
 gene_trees <- read.tree("merged.tre") 
