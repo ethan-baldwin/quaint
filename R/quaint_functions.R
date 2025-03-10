@@ -56,7 +56,7 @@ parse_table <- function(position,combos,quartet_table,st) {
   add2df
 }
 
-quaint <- function(test_taxa,species_tree,quartet_table,qt_vector,outgroups) {
+quaint <- function(test_taxa,species_tree,quartet_table,qt_vector,outgroup=NULL) {
 
   mrca <- getMRCA(species_tree, test_taxa)
   node_groups <- nodeGroups(species_tree,mrca) # create node groups to determine where taxa are
@@ -143,7 +143,7 @@ quaint_all <- function(species_tree,quartet_table,outgroup) {
 
   # run quaint on all taxon pairs
   pos <- 1:ncol(test_taxa_list)
-  taxon_pair_df <- lapply(pos,function(x) quaint(test_taxa_list[,x],species_tree,quartet_table,qt_vector,outgroups = outgroup))
+  taxon_pair_df <- lapply(pos,function(x) quaint(test_taxa_list[,x],species_tree,quartet_table,qt_vector,outgroup = outgroup))
   taxon_pair_df <- as.data.frame(do.call(rbind, taxon_pair_df))
 
   taxon_pair_df$adj_p_val <- p.adjust(taxon_pair_df$p_val, method = "fdr")
