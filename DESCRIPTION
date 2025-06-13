@@ -2,3 +2,10 @@ Package: quaint
 Type: Package
 Title: quaint
 Version: 0.0.1.0
+Imports:
+    MSCquartets,
+    combinat,
+    dplyr,
+    tidyr,
+    stringr,
+    ggplot2
