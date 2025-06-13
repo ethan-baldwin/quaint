@@ -197,16 +197,23 @@ get_qt_vector <- function(quartet_table) {
 
 summarize_quaint_table <- function(quaint_table,alpha = 0.05,use_adjusted_p=TRUE) {
   p_col <- if (use_adjusted_p) "adj_p_val" else "p_val"
-  # add column with test pair as a factor
-  quaint_table <- quaint_table %>%
-    rowwise() %>%
-    mutate(
-      pair = factor(paste(sort(c(taxon1,taxon2)),collapse = "|")),
-      d_sig = if(get(p_col) < alpha){d} else {0},
-      f_sig = if(get(p_col) < alpha){f} else {0},
-      ) %>%
-    ungroup()
 
+  # add column with test pair as a factor
+  quaint_table$pair <- factor(
+    apply(
+      quaint_table[ , c("taxon1", "taxon2")],          # take the two columns
+      1,                                               # row by row
+      function(x) paste(sort(x), collapse = "|")       # sort & paste
+    )
+  )
+  
+  # pull out the p‑values column
+  pvals <- quaint_table[[p_col]]
+  
+  # add the significance columns
+  quaint_table$d_sig <- ifelse(pvals < alpha, quaint_table$d, 0)
+  quaint_table$f_sig <- ifelse(pvals < alpha, quaint_table$f, 0)
+  
   # summarize the table by test pair
   summary_table <- quaint_table %>%
     group_by(pair) %>%
