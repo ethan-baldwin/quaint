@@ -1,6 +1,6 @@
 library(ggplot2)
 
-plot_quaint_heatmap <- function(quaint_results,tree,outgroup,plot_val) {
+plot_quaint_heatmap <- function(quaint_results,tree,outgroup,plot_val,cell_text=FALSE) {
   tip_labels<-setdiff(tree$tip.label,outgroup)
   combos<-expand.grid(tip_labels,tip_labels)
   
@@ -40,8 +40,10 @@ plot_quaint_heatmap <- function(quaint_results,tree,outgroup,plot_val) {
           axis.title.y=element_blank(),
           axis.ticks = element_line(color = "black"),
           legend.key.height = unit(1, 'inch'))+
-    scale_x_discrete(position="top") +
-    geom_text(aes(x=tax1,y=tax2,label=stat_rounded),color="black",size=7)
+    scale_x_discrete(position="top") 
+  # add text to the middle of cells if wanted
+  if(cell_text==TRUE) {heatmap <- heatmap + geom_text(aes(x=tax1,y=tax2,label=stat_rounded),color="black",size=7)}
+  
   
   heatmap
 }
