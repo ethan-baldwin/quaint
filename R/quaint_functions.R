@@ -225,8 +225,8 @@ summarize_quaint_table <- function(quaint_table,alpha = 0.05,use_adjusted_p=TRUE
       n_positive = sum(d > 0),
       n_positive_significant = sum(d > 0 & get(p_col) < alpha & !is.na(get(p_col)), na.rm = TRUE),
       # mean_d = ifelse(sum(d_sig >= 0) > 0, mean(d_sig[d_sig >= 0]), 0),
-      mean_d = ifelse(sum(d_sig) > 0, mean(d_sig), 0),
-      mean_f = mean(f_sig[d_sig>=0])
+      mean_d = ifelse(sum(d_sig,na.rm = TRUE) > 0, mean(d_sig,na.rm=TRUE), 0),
+      mean_f = mean(f_sig[d_sig>=0],na.rm=TRUE)
     ) %>%
     mutate(
       proportion = n_positive_significant/n_tests,
