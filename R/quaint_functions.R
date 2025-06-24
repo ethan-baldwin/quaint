@@ -82,7 +82,7 @@ quaint <- function(test_taxa,species_tree,quartet_table,qt_vector,outgroup=NULL)
   og_tips_from_tree <- node_groups[[setdiff(c(1,2,3),c(t1_group,t2_group))]] #outgroup tips from comparing sister tips
 
   # if outgroup is defined, use that as the outgroup tips. otherwise, use outgroup tips from tree
-  if(!hasArg(outgroup)) {
+  if(hasArg(outgroup)) {
     og_tips <- c()
     for(i in 1:length(outgroup)){
       og_tips[i] <- which(species_tree$tip.label==outgroup[i])
