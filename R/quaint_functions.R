@@ -4,6 +4,11 @@ library("dplyr")
 library("stringr")
 library("tidyr")
 
+
+#' Internal function to parse quartet table columns from MSCquartets determine which column in quartet
+#' @param taxa_pair pair of taxa that are put together in a quartet
+#' @param taxa_quartet the four taxa in a quartet, in the order they appear in the quartet table
+#' @NoRd
 find_column <- function(taxa_pair,taxa_quartet) {
   if (all(taxa_pair %in% taxa_quartet[1:2])|all(taxa_pair %in% taxa_quartet[3:4])) {
     return("12|34")
@@ -13,7 +18,12 @@ find_column <- function(taxa_pair,taxa_quartet) {
 
 }
 
-# parse_table <- function(position,combos,quartet_df,st) {
+#' Internal function to parse quartet table columns from MSCquartets determine which column in quartet
+#' @param position pair of taxa that are put together in a quartet
+#' @param combos 
+#' @param quartet_table 
+#' @param st 
+#' @NoRd
 parse_table <- function(position,combos,quartet_table,st) {
   current_combo <- combos[position,]
   ######### get order of taxa for quartet table ##########
