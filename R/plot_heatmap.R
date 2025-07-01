@@ -1,5 +1,12 @@
-library(ggplot2)
+# library(ggplot2)
 
+#' Plotting function WIP
+#' @param quaint_results Data frame with summarized quaint results.
+#' @param tree Species tree.
+#' @param outgroup Outgroup tip names.
+#' @param plot_val Value you want to plot.
+#' @param cell_text Boolean. Whether you want text in the heatmap cells or not.
+#' @noRd
 plot_quaint_heatmap <- function(quaint_results,tree,outgroup,plot_val,cell_text=FALSE) {
   tip_labels<-setdiff(tree$tip.label,outgroup)
   combos<-expand.grid(tip_labels,tip_labels)
@@ -48,6 +55,13 @@ plot_quaint_heatmap <- function(quaint_results,tree,outgroup,plot_val,cell_text=
   heatmap
 }
 
+#' Plotting function WIP
+#' @param quaint_results Data frame with summarized quaint results.
+#' @param tree Species tree.
+#' @param outgroup Outgroup tip names.
+#' @param plot_val Value you want to plot.
+#' @param cell_text Boolean. Whether you want text in the heatmap cells or not.
+#' @noRd
 get_plot_df <- function(quaint_results,tree,outgroup,plot_val,cell_text=FALSE) {
   tip_labels<-setdiff(tree$tip.label,outgroup)
   combos<-expand.grid(tip_labels,tip_labels)

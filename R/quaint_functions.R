@@ -1,14 +1,14 @@
-library("MSCquartets")
-library("combinat")
-library("dplyr")
-library("stringr")
-library("tidyr")
+# library("MSCquartets")
+# library("combinat")
+# library("dplyr")
+# library("stringr")
+# library("tidyr")
 
 
 #' Internal function to parse quartet table columns from MSCquartets determine which column in quartet
 #' @param taxa_pair pair of taxa that are put together in a quartet
 #' @param taxa_quartet the four taxa in a quartet, in the order they appear in the quartet table
-#' @NoRd
+#' @noRd
 find_column <- function(taxa_pair,taxa_quartet) {
   if (all(taxa_pair %in% taxa_quartet[1:2])|all(taxa_pair %in% taxa_quartet[3:4])) {
     return("12|34")
@@ -23,7 +23,7 @@ find_column <- function(taxa_pair,taxa_quartet) {
 #' @param combos 
 #' @param quartet_table 
 #' @param st 
-#' @NoRd
+#' @noRd
 parse_table <- function(position,combos,quartet_table,st) {
   current_combo <- combos[position,]
   ######### get order of taxa for quartet table ##########
@@ -66,7 +66,22 @@ parse_table <- function(position,combos,quartet_table,st) {
   add2df
 }
 
-quaint <- function(test_taxa,species_tree,quartet_table,qt_vector,outgroup=NULL) {
+#' Quaint for single pair
+#'
+#' Run the quaint test for introgression on a single pair of taxa
+#' @param test_taxa A vector of taxa that you want to test for introgression between. Must be two taxa. 
+#' @param species_tree A species tree. The tip names must match those in the gene trees used to make the quartet table. Must be rooted correctly.
+#' @param quartet_table A dataframe of quartet frequencies generated with the "quartetTable" or "quartetTableParallel" function from MSCquartets. 
+#' @param outgroup Optional but reccomended. The outgroup for your species tree. Can be one or more tip labels. If outgroup is not provided, quaint will run ABBA-BABA tests using all possible outgroups.
+#' @param qt_vector Optional parameter that is used internally by the "quaint_all" function to speed up many tests. 
+#' @return A dataframe with the results of each quaint ABBA-BABA test.
+#' @examples 
+#' tbd
+#' @importFrom ape getMRCA
+#' @importFrom MSCquartets nodeGroups
+#' @importFrom dplyr collapse mutate_at %>%
+#' @export
+quaint <- function(test_taxa,species_tree,quartet_table,outgroup=NULL,qt_vector) {
 
   mrca <- getMRCA(species_tree, test_taxa)
   node_groups <- nodeGroups(species_tree,mrca) # create node groups to determine where taxa are
@@ -143,6 +158,16 @@ quaint <- function(test_taxa,species_tree,quartet_table,qt_vector,outgroup=NULL)
   return_df
 }
 
+#' Run quaint on every pair of taxa
+#'
+#' Run the quaint test for introgression on every possible pair of taxa in the species tree
+#' @param species_tree A species tree. The tip names must match those in the gene trees used to make the quartet table. Must be rooted correctly.
+#' @param quartet_table A dataframe of quartet frequencies generated with the "quartetTable" or "quartetTableParallel" function from MSCquartets. 
+#' @param outgroup Optional but reccomended. The outgroup for your species tree. Can be one or more tip labels. If outgroup is not provided, quaint will run ABBA-BABA tests using all possible outgroups.
+#' @return A dataframe with the results of each quaint ABBA-BABA test.
+#' @examples 
+#' tbd
+#' @export
 quaint_all <- function(species_tree,quartet_table,outgroup) {
 
   # make list of pairs of species that are can be tested w/ quartet test
@@ -161,6 +186,11 @@ quaint_all <- function(species_tree,quartet_table,outgroup) {
   taxon_pair_df
 }
 
+#' Internal function to get pairs of taxa that you can do an ABBA-BABA test on given a species tree
+#' @param species_tree species tree
+#' @param outgroup outgroup 
+#' @importFrom combinat combn
+#' @noRd
 get_valid_test_pairs <- function(species_tree,outgroup) {
   # remove outgroups
   taxa <- setdiff(species_tree$tip.label,outgroup)
@@ -170,6 +200,13 @@ get_valid_test_pairs <- function(species_tree,outgroup) {
   pairwise_combos[,sapply(1:n_combos,is_taxon_pair_valid,pairwise_combos,species_tree)]
 }
 
+#' Internal function to test if you can perform ABBA-BABA test on a pair of taxa given a species tree
+#' @param position tbd
+#' @param p_combos tbd
+#' @param tree tbd
+#' @importFrom ape getMRCA
+#' @importFrom MSCquartets nodeGroups
+#' @noRd
 is_taxon_pair_valid <- function(position,p_combos,tree) {
   taxa_pair <- p_combos[,position]
   mrca <- getMRCA(tree, taxa_pair)
@@ -193,8 +230,12 @@ is_taxon_pair_valid <- function(position,p_combos,tree) {
   !(length(sister_tips_t1)==0 & (length(og_tips)==0)) & !(length(sister_tips_t1)==0 & length(sister_tips_t2)==0) & !(length(sister_tips_t2)==0 & (length(og_tips)==0))
 }
 
+#' Internal function that converts quartet table into vector of taxon names for faster processing
+#' @param position tbd
+#' @param p_combos tbd
+#' @param tree tbd
+#' @noRd
 get_qt_vector <- function(quartet_table) {
-  # convert quartet table into vector of taxon names for faster processing
   drop<-c("12|34","13|24","14|23","1234") # drop these columns
   qt_dropped_cnames <- quartet_table[,!colnames(quartet_table) %in% drop] # remove columns in "drop"
   sorted_colnames <- sort(colnames(qt_dropped_cnames)) # get list of sorted column names (for more efficient comparisons later)
@@ -205,6 +246,18 @@ get_qt_vector <- function(quartet_table) {
   qt_vector
 }
 
+#' Summarize quaint output table
+#'
+#' Summarize the output of quaint. Generates a dataframe with a row for each pair of taxa and summary statistics of all ABBA-BABA tests used to test for introgression between them.
+#' @param species_tree A species tree. The tip names must match those in the gene trees used to make the quartet table. Must be rooted correctly.
+#' @param quartet_table A dataframe of quartet frequencies generated with the "quartetTable" or "quartetTableParallel" function from MSCquartets. 
+#' @param outgroup Optional but reccomended. The outgroup for your species tree. Can be one or more tip labels. If outgroup is not provided, quaint will run ABBA-BABA tests using all possible outgroups.
+#' @return A dataframe with a row for each pair of taxa and summary statistics of all ABBA-BABA tests used to test for introgression between them.
+#' @examples 
+#' tbd
+#' @importFrom dplyr summarise mutate %>% 
+#' @importFrom tidyr separate
+#' @export
 summarize_quaint_table <- function(quaint_table,alpha = 0.05,use_adjusted_p=TRUE) {
   p_col <- if (use_adjusted_p) "adj_p_val" else "p_val"
 
