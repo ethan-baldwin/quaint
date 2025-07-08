@@ -38,10 +38,13 @@ parse_table <- function(position,combos,quartet_table,st) {
   test_taxa <- c(p1,p2) # taxa we are testing for introgression
 
   # subset the quartet table to only the row corresponding to the current quartet of taxa
-  # qdf <- as.data.frame(quartet_table)
-  # sub_qt <- quartet_df[quartet_df[,p1]==1&quartet_df[,p2]==1&quartet_df[,p3]==1&quartet_df[,o]==1,]
-  sub_qt <- quartet_table[quartet_table[,p1]==1&quartet_table[,p2]==1&quartet_table[,p3]==1&quartet_table[,o]==1,]
-
+  # if there is only one row in quartet_table, it will not be a matrix, so it needs to be handled separately 
+  if(is.matrix(quartet_table)){
+    sub_qt <- quartet_table[quartet_table[,p1]==1&quartet_table[,p2]==1&quartet_table[,p3]==1&quartet_table[,o]==1,]
+  } else {
+    sub_qt <- quartet_table
+  }
+  
   # create list of taxa names in the order in which they appear in the quartet table
   # qt_taxa <- colnames(sub_qt)[which(sub_qt == 1, arr.ind=T)[, "col"]]
   qt_taxa <- names(sub_qt)[sub_qt==1]
@@ -255,7 +258,7 @@ get_qt_vector <- function(quartet_table) {
 #' @return A dataframe with a row for each pair of taxa and summary statistics of all ABBA-BABA tests used to test for introgression between them.
 #' @examples 
 #' tbd
-#' @importFrom dplyr summarise mutate %>% 
+#' @importFrom dplyr summarise mutate %>% group_by
 #' @importFrom tidyr separate
 #' @export
 summarize_quaint_table <- function(quaint_table,alpha = 0.05,use_adjusted_p=TRUE) {
