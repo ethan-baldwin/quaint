@@ -1,9 +1,3 @@
-# library("MSCquartets")
-# library("combinat")
-# library("dplyr")
-# library("stringr")
-# library("tidyr")
-
 
 #' Internal function to parse quartet table columns from MSCquartets determine which column in quartet
 #' @param taxa_pair pair of taxa that are put together in a quartet
@@ -82,7 +76,7 @@ parse_table <- function(position,combos,quartet_table,st) {
 #' tbd
 #' @importFrom ape getMRCA
 #' @importFrom MSCquartets nodeGroups
-#' @importFrom dplyr collapse mutate_at %>%
+#' @importFrom dplyr collapse mutate_at %>% rowwise
 #' @export
 quaint <- function(test_taxa,species_tree,quartet_table,outgroup=NULL,qt_vector) {
 
@@ -258,7 +252,7 @@ get_qt_vector <- function(quartet_table) {
 #' @return A dataframe with a row for each pair of taxa and summary statistics of all ABBA-BABA tests used to test for introgression between them.
 #' @examples 
 #' tbd
-#' @importFrom dplyr summarise mutate %>% group_by
+#' @importFrom dplyr summarise mutate %>% group_by n
 #' @importFrom tidyr separate
 #' @export
 summarize_quaint_table <- function(quaint_table,alpha = 0.05,use_adjusted_p=TRUE) {

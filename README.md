@@ -33,6 +33,12 @@ This is an R package that uses quartet frequencies from a set of gene trees to c
 
 To use quaint, you need a set of gene trees and a species tree. The tip names in the gene trees should match those in the species tree exactly. The following example assumes you have the gene trees all in one file and a separate file with the species tree, all in newick format.
 
+In order to prepare the data, you will need the packages ape and MSCquartets
+   ```r
+   library(ape)
+   library(MSCquartets)
+      ```
+
 First, load the trees.
    ```r
    gene_trees <- read.tree("genetrees.tre")
