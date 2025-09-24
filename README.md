@@ -47,7 +47,7 @@ Next, load the trees.
 Ensure that your species tree is rooted correctly. Optionally assign your outgroup to a variable.
    ```r
    outgroup <- c("your_outgroup")
-   sp_tree <- root(sp_tree,outgroup,resolve)
+   sp_tree <- root(sp_tree,outgroup,resolve.root=TRUE)
    ```
 Next, we need to calculate a table with quartet frequencies for every quartet of tips in the tree. For this we the quartetTable function from the package MSCquartets. For trees larger than about 40 tips, this function may take awhile  it is probably worth using the parallel version of this function to make use of multiple cores
    ```r
