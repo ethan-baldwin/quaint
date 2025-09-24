@@ -37,9 +37,9 @@ In order to prepare the data, you will need the packages ape and MSCquartets
    ```r
    library(ape)
    library(MSCquartets)
-      ```
+   ```
 
-First, load the trees.
+Next, load the trees.
    ```r
    gene_trees <- read.tree("genetrees.tre")
    sp_tree <- read.tree("speciestree.tre")
@@ -47,7 +47,7 @@ First, load the trees.
 Ensure that your species tree is rooted correctly. Optionally assign your outgroup to a variable.
    ```r
    outgroup <- c("your_outgroup")
-   sp_tree <- root(sp_tree,outgroup)
+   sp_tree <- root(sp_tree,outgroup,resolve)
    ```
 Next, we need to calculate a table with quartet frequencies for every quartet of tips in the tree. For this we the quartetTable function from the package MSCquartets. For trees larger than about 40 tips, this function may take awhile  it is probably worth using the parallel version of this function to make use of multiple cores
    ```r
@@ -68,6 +68,22 @@ For each pair of taxa, there may be many quartets that can be used to test for g
    ```r
    # summarize results by pair, using an adjusted p value cutoff of 0.05 for the chi sq tests
    sum_table <- summarize_quaint_table(qt_all_pairs,alpha = 0.05,use_adjusted_p = TRUE)
+   ```
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+<!-- Visualization -->
+## Visualization
+
+The results from quaint can be visualized with the quaint_heatmap() command.
+   ```r
+   # plot heatmap
+   quaint_heatmap(sum_table,sp_tree,outgroup)
+   ```
+By default, this plots the "mean_d" column in the summary dataframe. This statistic is the average D across all individual hypothesis tests that are statistically significant. To plot a different column from this datatframe, such as the proportion of significant tests, pass a different column name to the plot_val argument.
+   ```r
+   # plot heatmap w/ proportion of significant tests
+   quaint_heatmap(sum_table,sp_tree,outgroup,plot_val="proportion")
    ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
