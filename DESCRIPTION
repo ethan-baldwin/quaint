@@ -1,13 +1,14 @@
 Package: quaint
 Type: Package
 Title: quaint
-Version: 0.0.1.0
+Version: 0.0.2.0
 Imports:
     MSCquartets,
     combinat,
     dplyr,
     tidyr,
     stringr,
-    ggplot2
+    ggplot2,
+    ape
 Encoding: UTF-8
 RoxygenNote: 7.3.2
